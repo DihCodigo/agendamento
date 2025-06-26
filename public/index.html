@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Agendamento de Serviço</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background-color: #f7f7f7;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .dias {
+      display: flex;
+      overflow-x: auto;
+      gap: 8px;
+      padding: 10px;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .dia {
+      min-width: 60px;
+      padding: 10px;
+      border-radius: 6px;
+      text-align: center;
+      cursor: pointer;
+      border: 1px solid #ddd;
+    }
+
+    .dia:hover {
+      background-color: #eee;
+    }
+
+    .dia.selecionado {
+      background-color: #ffefe5;
+      border-color: orange;
+      font-weight: bold;
+    }
+
+    .grade-horarios {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .horario {
+      padding: 8px;
+      text-align: center;
+      background-color: #fff;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .horario:hover {
+      background-color: #e6f7ff;
+    }
+
+    .horario.ocupado {
+      background-color: #f5c6cb;
+      cursor: not-allowed;
+      text-decoration: line-through;
+    }
+
+    .formulario {
+      display: none;
+      background-color: white;
+      border: 1px solid #ccc;
+      padding: 15px;
+      border-radius: 10px;
+      max-width: 400px;
+      margin: 0 auto;
+    }
+
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 6px;
+      margin-top: 5px;
+    }
+
+    button {
+      margin-top: 15px;
+      padding: 10px;
+      background-color: orange;
+      border: none;
+      color: white;
+      width: 100%;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: darkorange;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Escolha seu Horário</h2>
+
+  <div class="dias" id="dias-container"></div>
+
+  <div class="grade-horarios" id="grade-horarios"></div>
+
+  <form class="formulario" id="form-agendamento">
+    <h3>Finalizar Agendamento</h3>
+    <p><strong>Dia selecionado:</strong> <span id="dia-selecionado"></span></p>
+    <p><strong>Horário:</strong> <span id="horario-selecionado"></span></p>
+
+    <label>Nome:</label>
+    <input type="text" required>
+
+    <label>Tipo de Serviço:</label>
+    <select required>
+      <option>Corte Masculino</option>
+      <option>Corte Feminino</option>
+      <option>Coloração</option>
+      <option>Hidratação</option>
+    </select>
+
+    <label>Telefone:</label>
+    <input type="tel" required>
+
+    <button type="submit">Confirmar Agendamento</button>
+  </form>
+
+  <script>
+    const diasContainer = document.getElementById('dias-container');
+    const gradeHorarios = document.getElementById('grade-horarios');
+    const form = document.getElementById('form-agendamento');
+    const diaSelecionadoSpan = document.getElementById('dia-selecionado');
+    const horarioSelecionadoSpan = document.getElementById('horario-selecionado');
+
+    let diaAtual = null;
+    let horarioSelecionado = null;
+    let horariosOcupados = {};
+
+    async function carregarOcupados() {
+      const res = await fetch('/ocupados');
+      horariosOcupados = await res.json();
+    }
+
+    function gerarDias() {
+      const hoje = new Date();
+      for (let i = 0; i < 20; i++) {
+        const dia = new Date(hoje);
+        dia.setDate(dia.getDate() + i);
+        const dataStr = dia.toISOString().split('T')[0];
+
+        const div = document.createElement('div');
+        div.className = 'dia';
+        div.textContent = dia.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
+        div.dataset.date = dataStr;
+        div.onclick = () => selecionarDia(dataStr, div);
+        diasContainer.appendChild(div);
+      }
+    }
+
+    function selecionarDia(dataStr, div) {
+      document.querySelectorAll('.dia').forEach(d => d.classList.remove('selecionado'));
+      div.classList.add('selecionado');
+      diaAtual = dataStr;
+      gerarHorarios(dataStr);
+      form.style.display = 'none';
+    }
+
+    function gerarHorarios(dataStr) {
+      gradeHorarios.innerHTML = '';
+      const ocupados = horariosOcupados[dataStr] || [];
+      const horaInicio = 9;
+      const horaFim = 18;
+
+      for (let h = horaInicio; h < horaFim; h++) {
+        for (let m = 0; m < 60; m += 15) {
+          const hh = h.toString().padStart(2, '0');
+          const mm = m.toString().padStart(2, '0');
+          const horarioStr = `${hh}:${mm}`;
+          const div = document.createElement('div');
+          div.className = 'horario';
+          div.textContent = horarioStr;
+
+          if (ocupados.includes(horarioStr)) {
+            div.classList.add('ocupado');
+          } else {
+            div.onclick = () => selecionarHorario(horarioStr);
+          }
+
+          gradeHorarios.appendChild(div);
+        }
+      }
+    }
+
+    function selecionarHorario(horario) {
+      if (!diaAtual) return;
+      horarioSelecionado = horario;
+      form.style.display = 'block';
+      diaSelecionadoSpan.textContent = diaAtual;
+      horarioSelecionadoSpan.textContent = horario;
+    }
+
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+
+      const nome = form.querySelector('input[type="text"]').value;
+      const telefone = form.querySelector('input[type="tel"]').value;
+      const servico = form.querySelector('select').value;
+
+      const res = await fetch('/agendar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nome, telefone, servico,
+          data: diaAtual,
+          horario: horarioSelecionado
+        })
+      });
+
+      if (res.ok) {
+        alert('Agendado com sucesso!');
+        await carregarOcupados();
+        gerarHorarios(diaAtual);
+        form.style.display = 'none';
+      } else {
+        const { message } = await res.json();
+        alert(message);
+      }
+    };
+
+    carregarOcupados().then(gerarDias);
+  </script>
+</body>
+</html>

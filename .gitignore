@@ -1,0 +1,32 @@
+# Ignora dependências
+/node_modules
+
+# Ignora arquivos de log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Ignora arquivos de sistema
+.DS_Store
+Thumbs.db
+
+# Ignora ambiente de produção local
+.env
+.env.local
+.env.*.local
+
+# Ignora arquivos de banco de dados SQLite (caso um dia use)
+*.sqlite
+*.sqlite3
+
+# IDEs / editores
+.vscode/
+.idea/
+
+# Arquivos temporários
+*.swp
+*.bak
+*.tmp
+
+# Sistema operacional
+Desktop.ini
